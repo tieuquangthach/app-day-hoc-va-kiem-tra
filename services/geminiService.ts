@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { QuizQuestion, QuizMatrix, QuizSpecification, SpecificationItem } from '../types';
 
@@ -13,7 +12,6 @@ const parseJsonResponse = <T>(jsonText: string): T => {
 };
 
 export const generateSpecification = async (matrix: QuizMatrix, selectedClass: string, selectedSubject: string): Promise<QuizSpecification> => {
-  // Luôn lấy API_KEY mới nhất từ môi trường (Vercel injection)
   const apiKey = process.env.API_KEY;
   if (!apiKey) throw new Error("API Key chưa được cấu hình. Vui lòng kết nối API ở góc phải màn hình.");
   
@@ -31,10 +29,10 @@ export const generateSpecification = async (matrix: QuizMatrix, selectedClass: s
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-pro-preview",
+      model: "gemini-1.5-flash", // Đổi model để tránh lỗi 429
       contents: prompt,
       config: {
-        thinkingConfig: { thinkingBudget: 16000 },
+        // Đã gỡ bỏ thinkingConfig không tương thích
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.ARRAY,
@@ -74,17 +72,15 @@ export const generateQuizFromSpec = async (specification: QuizSpecification, sel
     1. Lời giải chi tiết step-by-step trong 'huongDanChamDiem'.
     2. LaTeX chuẩn ($ cho inline, $$ cho block). Số thập phân dùng dấu phẩy.
     3. Điền Metadata chính xác theo đặc tả.
-    4. Nếu câu hỏi có hình vẽ minh họa (đặc biệt là hình học), hãy cung cấp mã JavaScript để vẽ hình đó lên HTML5 Canvas 2D vào trường 'drawingCode'. 
-       Mã vẽ phải sạch, nhận biến 'ctx' (2D context) và 'canvas'. Canvas mặc định 500x300. Hãy vẽ căn giữa, rõ nét, có ký hiệu đỉnh/góc nếu cần.
+    4. Nếu câu hỏi có hình vẽ minh họa, cung cấp mã JS vẽ Canvas vào 'drawingCode'.
     5. Trả về mảng JSON QuizQuestion.
   `;
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-pro-preview",
+      model: "gemini-1.5-flash", // Đổi model để tăng tốc độ tạo đề
       contents: prompt,
       config: {
-        thinkingConfig: { thinkingBudget: 32000 },
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.ARRAY,
@@ -126,11 +122,8 @@ export const generateSimilarQuizFromFile = async (content: { data?: string, mime
 
   const ai = new GoogleGenAI({ apiKey });
   const promptText = `
-    Bạn là chuyên gia giáo dục. Hãy phân tích đề kiểm tra được cung cấp và thực hiện:
-    1. Nhận diện các câu hỏi, chủ đề và mức độ kiến thức.
-    2. Tạo một bộ đề MỚI gồm 10 câu hỏi có tính chất TƯƠNG TỰ đề gốc (cùng chủ đề, độ khó) nhưng THAY ĐỔI số liệu hoặc nội dung cụ thể.
-    3. Đảm bảo sử dụng LaTeX ($...$ hoặc $$...$$) và cung cấp lời giải chi tiết.
-    4. Trả về mảng JSON QuizQuestion.
+    Tạo bộ đề MỚI gồm 10 câu hỏi TƯƠNG TỰ đề gốc. 
+    Sử dụng LaTeX và cung cấp lời giải chi tiết. Trả về mảng JSON QuizQuestion.
   `;
 
   const parts: any[] = [];
@@ -143,10 +136,9 @@ export const generateSimilarQuizFromFile = async (content: { data?: string, mime
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-pro-preview",
+      model: "gemini-1.5-flash", // Đổi model cho tính năng tạo đề từ file
       contents: [{ parts }],
       config: {
-        thinkingConfig: { thinkingBudget: 32000 },
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.ARRAY,
@@ -187,22 +179,15 @@ export const regenerateSingleQuestion = async (oldQuestion: QuizQuestion, select
 
   const ai = new GoogleGenAI({ apiKey });
   const prompt = `
-    Tạo 1 câu hỏi ${selectedSubject} ${selectedClass} mới (KHÁC câu cũ: ${oldQuestion.cauHoi}) cùng tiêu chí:
-    - Loại: ${oldQuestion.loaiCauHoi}
-    - Chủ đề: ${oldQuestion.metadata?.chuDe}
-    - Mức độ: ${oldQuestion.metadata?.mucDo}
-    
-    Yêu cầu: LaTeX chuẩn, lời giải chi tiết. 
-    Nếu có hình vẽ minh họa, cung cấp mã JS vẽ Canvas vào 'drawingCode'.
+    Tạo 1 câu hỏi ${selectedSubject} ${selectedClass} mới (KHÁC câu cũ: ${oldQuestion.cauHoi}) cùng tiêu chí.
     JSON duy nhất.
   `;
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-pro-preview",
+      model: "gemini-1.5-flash", // Đổi model cho tính năng làm mới từng câu
       contents: prompt,
       config: {
-        thinkingConfig: { thinkingBudget: 8000 },
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
