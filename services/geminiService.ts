@@ -14,7 +14,7 @@ const parseJsonResponse = <T>(jsonText: string): T => {
 
 export const generateSpecification = async (matrix: QuizMatrix, selectedClass: string, selectedSubject: string): Promise<QuizSpecification> => {
   // Luôn lấy API_KEY mới nhất từ môi trường (Vercel injection)
-  const apiKey = process.env.API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("API Key chưa được cấu hình. Vui lòng kết nối API ở góc phải màn hình.");
   
   const ai = new GoogleGenAI({ apiKey });
